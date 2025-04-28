@@ -17,7 +17,9 @@
   </a>
 </div>
 
-![teaser](assets/teaser.png)
+<p align="center">
+  <img src="./assets/teaser.png" alt="EditSplat Teaser" style="width:100%;"/>
+</p>
 
 ## **⚙️ Installation**
 
@@ -43,7 +45,9 @@ If you want to edit your own dataset, you must first pre-train a 3D Gaussian Spl
 > *We are planning to release more datasets with detailed instructions soon — stay tuned!*
 
 ## **🎨 Editing**
-
+<p align="center">
+  <img src="./assets/pipeline.png" alt="EditSplat Teaser" style="width:100%;"/>
+</p>
 To run the editing pipeline:
 
 ```bash
