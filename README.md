@@ -17,7 +17,7 @@
   </a>
 </div>
 
-<br>
+![teaser](assets/teaser.png)
 
 ## **⚙️ Installation**
 
