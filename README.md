@@ -1,5 +1,6 @@
 <p align="center">
-  <h1 align="center"><strong>[CVPR 2025] EditSplat: Multi-View Fusion & Attention-Guided Optimization for View-Consistent 3D Scene Editing</strong></h1>
+  <h1 align="center"><strong>[CVPR 2025] EditSplat: Multi-View Fusion and Attention-Guided Optimization
+for View-Consistent 3D Scene Editing with 3D Gaussian Splatting</strong></h1>
 </p>
 
 
