@@ -66,7 +66,7 @@ You can render custom novel views from the updated 3D scene stored in `cvpr25_Ed
 
 
 <details>
-<summary><span style="font-weight: bold;">💻 Command Line Arguments for editing</span></summary>
+<summary><strong>💻 Command Line Arguments for editing</strong></summary>
 
 
   ```python
@@ -120,7 +120,7 @@ python run_editing.py -s ./dataset/face -m output/face_to_marble_sculpture --sou
 To produce your own edited results, you can maximize performance by tuning the following hyperparameters. Defaults are set according to those used in the main paper.
 
 <details>
-<summary><span style="font-weight: bold;">🛠️ Hyperparameter Details</span></summary>
+<summary><strong>🛠️ Hyperparameter Details</strong></summary>
 
 
   #### --epoch
