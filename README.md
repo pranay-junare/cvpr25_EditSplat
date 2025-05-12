@@ -66,7 +66,7 @@ You can render custom novel views from the updated 3D scene stored in `cvpr25_Ed
 
 
 <details>
-<summary><span style="font-weight: bold;">Command Line Arguments for editing</span></summary>
+<summary><span style="font-weight: bold;">💻 Command Line Arguments for editing</span></summary>
 
 
   ```python
