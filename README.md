@@ -187,3 +187,12 @@ If you find our work useful, please consider citing:
   year={2024},
 }
 ```
+
+## Acknowledgement
+
+Our code is based on these wonderful repos:
+
+* [Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting)
+* [GaussianEditor](https://github.com/buaacyw/GaussianEditor)
+* [InstructNerf2Nerf](https://github.com/ayaanzhaque/instruct-nerf2nerf)
+* [InstructPix2Pix](https://github.com/timothybrooks/instruct-pix2pix)
