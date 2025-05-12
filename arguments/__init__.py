@@ -78,8 +78,6 @@ class EditingParams(ParamGroup):
         self.sampling_prompt = ""
         self.object_prompt = ""
         self.target_mask_prompt = ""
-        self.threshold_rate = 0.3
-        self.scale_factor = 1.0
         self.text_guidance_scale = 7.5
         self.image_guidance_scale = 1.5
         self.MFG_scale = 1.0

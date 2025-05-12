@@ -1,4 +1,4 @@
-name: editsplat
+name: editsplat_test
 channels:
   - pytorch
   - nvidia
@@ -15,8 +15,8 @@ dependencies:
   - pip:
     # Lang-SAM
     - git+https://github.com/paulguerrero/lang-sam.git@main#egg=lang-sam
-    # Grounding DINO
-    - git+https://github.com/IDEA-Research/GroundingDINO.git@main#egg=GroundingDINO
+    # # Grounding DINO
+    # - git+https://github.com/IDEA-Research/GroundingDINO.git@main#egg=GroundingDINO
     # OpenAI CLIP
     - git+https://github.com/openai/CLIP.git@main#egg=clip
     - diffusers==0.30.3
@@ -30,5 +30,5 @@ dependencies:
     - matplotlib
     - lpips
     - numpy==1.26.1
-    - -e submodules/diff-gaussian-rasterization
-    - -e submodules/simple-knn
+    - submodules/diff-gaussian-rasterization
+    - submodules/simple-knn
