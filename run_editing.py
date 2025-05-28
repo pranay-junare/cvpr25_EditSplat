@@ -215,7 +215,8 @@ class editsplat_Pipeline(StableDiffusionInstructPix2PixPipeline):
         lang_sam = LangSAM()
 
         # load 3D Gaussian Splatting
-        gaussians = GaussianModel(dataset.sh_degree, anchor_weight_init_g0=0.1, anchor_weight_init=0.1, anchor_weight_multiplier=2.0)
+        gaussians = GaussianModel(dataset.sh_degree)
+
         scene = Scene(dataset, gaussians)
 
         gaussians.training_setup(opt)

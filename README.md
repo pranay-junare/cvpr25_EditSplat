@@ -37,17 +37,17 @@ conda env create -f environment.yaml
 conda activate editsplat
 ```
 
-## **📂 Dataset**
+## 📂 **Dataset and Pretrained Weights**
 
-We provide a preprocessed **Face** dataset.
+We provide datasets and pretrained weights for all scenes presented in our paper, allowing users to easily reproduce our results and experiment further.
 
-- 📥 Download here: [Drive Link](https://drive.google.com/drive/folders/1zpkYAJsJxcs13J0bZa-jThuiWgStdpWX?usp=sharing)
+- 📥 **Download**: [Google Drive](https://drive.google.com/drive/folders/1TBawx96v0KtflEH1rfLIYu1_xw1KY4uC?usp=drive_link)
+
 
 After downloading, move the dataset into the cvpr25_EditSplat/dataset/ directory.
 
 If you want to edit your own dataset, you must first pre-train a 3D Gaussian Splatting (3DGS) model from your custom dataset using COLMAP for camera poses.
 
-> *We are planning to release more datasets with detailed instructions soon — stay tuned!*
 
 ## **🎨 Editing**
 
@@ -71,7 +71,7 @@ You can render custom novel views from the updated 3D scene stored in `cvpr25_Ed
 
 
   ```python
-python run_editing.py -s ./dataset/face -m output/face_to_marble_sculpture --source_checkpoint ./dataset/face/chkpnt30000.pth --object_prompt "face" --target_prompt "Make his face resemble that of a marble sculpture" --sampling_prompt "a photo of a marble sculpture" --target_mask_prompt "face"
+python run_editing.py -s ./dataset/dataset/face -m output/face_to_marble_sculpture --source_checkpoint ./dataset/pretrained/face/chkpnt30000.pth --object_prompt "face" --target_prompt "Make his face resemble that of a marble sculpture" --sampling_prompt "a photo of a marble sculpture" --target_mask_prompt "face"
   ```
 
   #### --source_path / -s

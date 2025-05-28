@@ -59,8 +59,6 @@ def camera2rasterizer(viewpoint_camera, bg_color: torch.Tensor, sh_degree: int =
 
     return rasterizer
 
-MAX_ANCHOR_WEIGHT = 10
-
 
 class GaussianModel:
     def setup_functions(self):
@@ -83,20 +81,9 @@ class GaussianModel:
     def __init__(
             self,
             sh_degree: int,
-            anchor_weight_init_g0: float,
-            anchor_weight_init: float,
-            anchor_weight_multiplier: float,
     ):
         self.active_sh_degree = 0
-        self.anchor_weight_init = anchor_weight_init
-        self.anchor_weight_multiplier = anchor_weight_multiplier
-        self._anchor_loss_schedule = torch.tensor(
-            [anchor_weight_init_g0], device="cuda"
-        )  # generation 0 begin from weight 0
-        self.anchor_weight_init_g0 = anchor_weight_init_g0
-        # self._anchor_loss_schedule[x] = y means weight y will be multiplied to the anchor loss of generation x
         self.max_sh_degree = sh_degree
-        self._generation = torch.empty(0)  # begin from 0
         self._xyz = torch.empty(0)
         self._features_dc = torch.empty(0)
         self._features_rest = torch.empty(0)
@@ -110,34 +97,12 @@ class GaussianModel:
         self.percent_dense = 0
         self.spatial_lr_scale = 0
         self.setup_functions()
-        self.anchor = {}
         self.localize = False
 
         # self.attn_mask = torch.empty(0)
         # self.densi_attn_mask = torch.empty(0)
 
         self.densi_mask = torch.empty(0)
-
-        
-        
-
-    def update_anchor_term(self, anchor_weight_init_g0: float,
-                           anchor_weight_init: float,
-                           anchor_weight_multiplier: float,
-                           ):
-
-        self.anchor_weight_init = anchor_weight_init
-        self.anchor_weight_multiplier = anchor_weight_multiplier
-        self._anchor_loss_schedule = torch.tensor(
-            [anchor_weight_init_g0], device="cuda"
-        )  # generation 0 begin from weight 0
-        self.anchor_weight_init_g0 = anchor_weight_init_g0
-
-    def anchor_postfix(self):
-        self._generation[...] = 0
-        self._anchor_loss_schedule = torch.tensor(
-            [self.anchor_weight_init_g0], device="cuda"
-        )  # generation 0 begin from weight 0
 
     def capture(self):
         return (
@@ -154,66 +119,6 @@ class GaussianModel:
             self.optimizer.state_dict(),
             self.spatial_lr_scale,
         )
-
-    def update_anchor(self):
-        self.anchor = dict(
-            _xyz=self._xyz.detach().clone(),
-            _features_dc=self._features_dc.detach().clone(),
-            _features_rest=self._features_rest.detach().clone(),
-            _scaling=self._scaling.detach().clone(),
-            _rotation=self._rotation.detach().clone(),
-            _opacity=self._opacity.detach().clone(),
-        )
-
-    def update_anchor_loss_schedule(self):
-        for generation_idx, weight in enumerate(self._anchor_loss_schedule):
-            self._anchor_loss_schedule[generation_idx] = min(
-                self.anchor_weight_multiplier * weight, MAX_ANCHOR_WEIGHT
-            )
-
-        if self.generation_num > 1:
-            assert self._anchor_loss_schedule[-1] == 0
-            self._anchor_loss_schedule[-1] = self.anchor_weight_init
-            # generation_0 begins with 1 anchor loss weight, generations after it begin with self.anchor_weight_init
-            # the overall anchor loss can be modified through lambda_anchor_xxx
-        self._anchor_loss_schedule = torch.cat(
-            [self._anchor_loss_schedule, torch.tensor([0], device="cuda")]
-        )  # firstborn generation won't be applied anchor loss
-
-    # anchor loss
-    def anchor_loss(self):
-        out = {
-            "loss_anchor_color": 0,
-            "loss_anchor_geo": 0,
-            "loss_anchor_opacity": 0,
-            "loss_anchor_scale": 0,
-        }
-
-        target_generation = self._generation[self.mask]
-        anchor_weight_list = torch.gather(
-            self._anchor_loss_schedule, dim=0, index=target_generation
-        )
-
-        for key, value in self.anchor.items():
-            delta = torch.nn.functional.mse_loss(
-                getattr(self, key)[self.mask], value[self.mask], reduction="none"
-            )
-            if "feature" in key:
-                delta *= anchor_weight_list[:, None, None]
-            else:
-                delta *= anchor_weight_list[:, None]
-            delta = torch.mean(delta)
-            if key in ["_xyz", "_rotation"]:
-                out["loss_anchor_geo"] += delta
-            elif key in ["_features_dc", "_features_rest"]:
-                out["loss_anchor_color"] += delta
-            elif key in ["_opacity"]:
-                out["loss_anchor_opacity"] += delta
-            elif key == "_scaling":
-                out["loss_anchor_scale"] += delta
-            else:
-                raise
-        return out
 
     def restore(self, model_args, training_args):
         (
@@ -244,12 +149,7 @@ class GaussianModel:
             self.mask[:] = 1  # all updatable
         self.remove_grad_mask()
         self.apply_grad_mask(self.mask)
-        self.update_anchor()
 
-
-    @property
-    def generation_num(self):
-        return len(self._anchor_loss_schedule)
 
     @property
     def get_scaling(self):
@@ -342,12 +242,7 @@ class GaussianModel:
         self._opacity = nn.Parameter(opacities.requires_grad_(True))
         self.max_radii2D = torch.zeros((self.get_xyz.shape[0]), device="cuda")
         self.active_sh_degree
-        self._generation = torch.zeros(
-            self._opacity.shape[0],
-            dtype=torch.int64,
-            device="cuda",
-            requires_grad=False,
-        )  # generation list, begin from zero
+        
         self.set_mask(
             torch.ones(
                 self._opacity.shape[0],
@@ -357,8 +252,6 @@ class GaussianModel:
             )
         )
         self.apply_grad_mask(self.mask)
-
-        self.update_anchor()
 
     def training_setup(self, training_args):
         self.percent_dense = training_args.percent_dense
@@ -406,12 +299,6 @@ class GaussianModel:
             max_steps=training_args.position_lr_max_steps,
         )
 
-        self._generation = torch.zeros(
-            self._opacity.shape[0],
-            dtype=torch.int64,
-            device="cuda",
-            requires_grad=False,
-        )  # generation list, begin from zero
 
 
     def update_learning_rate(self, iteration):
@@ -565,12 +452,6 @@ class GaussianModel:
         )
 
         self.active_sh_degree = self.max_sh_degree
-        self._generation = torch.zeros(
-            self._opacity.shape[0],
-            dtype=torch.int64,
-            device="cuda",
-            requires_grad=False,
-        )  # generation list, begin from zero
         self.set_mask(
             torch.ones(
                 self._opacity.shape[0],
@@ -580,8 +461,6 @@ class GaussianModel:
             )
         )
         self.apply_grad_mask(self.mask)
-
-        self.update_anchor()
 
     def replace_tensor_to_optimizer(self, tensor, name):
         optimizable_tensors = {}
@@ -637,7 +516,6 @@ class GaussianModel:
         self.max_radii2D = self.max_radii2D[valid_points_mask]
 
         self.mask = self.mask[valid_points_mask]
-        self._generation = self._generation[valid_points_mask]
 
     def cat_tensors_to_optimizer(self, tensors_dict):
         optimizable_tensors = {}
@@ -743,14 +621,6 @@ class GaussianModel:
         new_mask = torch.cat([self.mask[selected_pts_mask]] * N, dim=0)
         self.mask = torch.cat([self.mask, new_mask], dim=0)
 
-        new_generation = torch.zeros_like(
-            selected_pts_mask.nonzero()[:, 0], dtype=torch.int64
-        )
-        new_generation[:] = self.generation_num
-        new_generation = torch.cat([new_generation] * N, dim=0)
-        self._generation = torch.cat([self._generation, new_generation])
-        assert self._generation.shape == self.mask.shape
-
         prune_filter = torch.cat(
             (
                 selected_pts_mask,
@@ -759,7 +629,6 @@ class GaussianModel:
         )
 
         self.prune_points(prune_filter)
-        assert self._generation.shape == self.mask.shape
 
     def densify_and_clone(self, grads, grad_threshold, scene_extent):
         # Extract points that satisfy the gradient condition
@@ -793,17 +662,11 @@ class GaussianModel:
         ), "nontarget area should not be densified"
         self.mask = torch.cat([self.mask, self.mask[selected_pts_mask]], dim=0)
 
-        new_generation = torch.zeros_like(
-            selected_pts_mask.nonzero()[:, 0], dtype=torch.int64
-        )
-        new_generation[:] = self.generation_num
-        self._generation = torch.cat([self._generation, new_generation])
-
     def densify_and_prune(
             self, max_grad, min_opacity, extent, max_screen_size, 
             is_first_densification=False, k_percent=0.15, attn_thres=0.1
     ):  
-        # import pdb; pdb.set_trace()
+
         grads = self.xyz_gradient_accum / self.denom
         grads[grads.isnan()] = 0.0
         
@@ -815,7 +678,6 @@ class GaussianModel:
             grads = grads * self.mask[:, None]
         
         if is_first_densification: # fist densification -> prune points high top k gradient points
-            # import pdb; pdb.set_trace()
             print(f"first densification...\nTrimming top {k_percent}% gradient points")
             before = self.get_xyz.shape[0]
             top_k = int((k_percent / 100) * self.mask.numel())
@@ -831,7 +693,7 @@ class GaussianModel:
 
             self.prune_points(prune_mask)
             prune = self.get_xyz.shape[0]
-            assert self._generation.shape == self.mask.shape
+            
             # print(
             #     f"Pruning: before: {before} - after: {prune}"
             # )
@@ -841,16 +703,12 @@ class GaussianModel:
             self.mask = self.mask > attn_thres
             self.apply_grad_mask(self.mask)
 
-            # self.update_anchor()
-            # self.update_anchor_loss_schedule()
-
             torch.cuda.empty_cache()
             return
 
         before = self.get_xyz.shape[0]
         self.densify_and_clone(grads, max_grad, extent)
         clone = self.get_xyz.shape[0]
-        # import pdb; pdb.set_trace()
         self.densify_and_split(grads, max_grad, extent)
         split = self.get_xyz.shape[0]
 
@@ -865,7 +723,6 @@ class GaussianModel:
         prune_mask = torch.logical_and(prune_mask, self.mask)  # fix bug
         self.prune_points(prune_mask)
         prune = self.get_xyz.shape[0]
-        assert self._generation.shape == self.mask.shape
 
         # print(
         #     f"before: {before} - clone: {clone} - split: {split} - prune: {prune} "
@@ -873,9 +730,6 @@ class GaussianModel:
 
         self.remove_grad_mask()
         self.apply_grad_mask(self.mask)
-
-        # self.update_anchor()
-        # self.update_anchor_loss_schedule()
 
         torch.cuda.empty_cache()
 
@@ -917,8 +771,6 @@ class GaussianModel:
 
         def position_hook(grad):
             
-            # import pdb; pdb.set_trace()
-
             final_grad = l_position * grad *(
                 self.mask[:, None] if grad.ndim == 2 else self.mask[:, None, None]
             )
@@ -943,66 +795,6 @@ class GaussianModel:
                 self.hooks.append(this_field.register_hook(color_hook))
             else: # _xyz, _scaling, _rotation
                 self.hooks.append(this_field.register_hook(position_hook))
-
-    def __apply_grad_mask__(self, mask, attn_mask=None, is_densification=True, l_color=1, l_position=1):
-
-        assert self.mask.shape[0] == self._xyz.shape[0]
-
-        if is_densification:
-            self.set_mask(mask)
-        else:
-            # self.set_attn_mask(mask)
-            self.set_attn_mask(attn_mask * mask)
-
-        def hook(grad):
-            # print("before hook")
-            # print(grad.abs().max())
-            # print(grad.abs().mean())
-            # print("mask max value", self.mask.max())
-
-            final_grad = grad * (
-                self.mask[:, None] if grad.ndim == 2 else self.mask[:, None, None]
-            )
-            # print("after hook")
-            # print(final_grad.abs().max())
-            # print(final_grad.abs().mean())
-            return final_grad
-        
-        def attn_position_hook(grad):
-            # print("before hook")
-            # print(grad.abs().max())
-            # print(grad.abs().mean())
-            # print("mask max value", self.attn_mask.max())
-            final_grad = l_position * grad *(
-                self.attn_mask[:, None] if grad.ndim == 2 else self.attn_mask[:, None, None]
-            )
-            # print("after hook")
-            # print(final_grad.abs().max())
-            # print(final_grad.abs().mean())
-            return final_grad
-        
-        def attn_color_hook(grad):
-            final_grad = l_color * grad * (
-                self.attn_mask[:, None] if grad.ndim == 2 else self.attn_mask[:, None, None]
-            )
-            return final_grad
-
-        
-        # fields = ["_xyz", "_features_dc", "_features_rest", "_opacity", "_scaling"]
-        fields = ["_xyz", "_features_dc", "_features_rest", "_opacity", "_scaling", "_rotation"]
-
-        self.hooks = []
-
-        for field in fields:
-            this_field = getattr(self, field)
-            assert this_field.is_leaf and this_field.requires_grad
-            if is_densification:
-                self.hooks.append(this_field.register_hook(hook))
-            else:
-                if field == "_features_dc" or field == "_features_rest" or field == "_opacity":
-                    self.hooks.append(this_field.register_hook(attn_color_hook))
-                else: # _xyz, _scaling, _rotation
-                    self.hooks.append(this_field.register_hook(attn_position_hook))
 
 
     def remove_grad_mask(self):
@@ -1066,7 +858,3 @@ class GaussianModel:
         self.mask = torch.cat([self.mask, torch.ones_like(new_opacities[:, 0], dtype=torch.bool)], dim=0)
         self.remove_grad_mask()
         self.apply_grad_mask(self.mask)
-
-        self._generation = torch.cat([self._generation, torch.zeros_like(new_opacities[:, 0], dtype=torch.int64)],
-                                     dim=0)
-        self.update_anchor()

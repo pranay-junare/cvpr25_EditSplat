@@ -30,5 +30,6 @@ dependencies:
     - matplotlib
     - lpips
     - numpy==1.26.1
+    - jaxtyping
     - submodules/diff-gaussian-rasterization
     - submodules/simple-knn
