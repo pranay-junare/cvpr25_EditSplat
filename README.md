@@ -175,6 +175,24 @@ To produce your own edited results, you can maximize performance by tuning the f
   please refer to the official [3D Gaussian Splatting](https://github.com/graphdeco-inria/gaussian-splatting) repository.
 </details>
 
+## 🎬 **Rendering**
+
+We provide several convenient rendering options for visualizing your edited 3D Gaussian Splatting (3DGS) models.
+
+### ▶️ **Render Novel View Video**
+
+Generate novel view videos and GIF animations:
+
+```bash
+python render.py --model_path output/face_to_marble_sculpture --iteration 30560 --video
+```
+The resulting videos and GIFs are saved under:
+```swift
+output/face_to_marble_sculpture/video/ours_30560/
+├── final_video.mp4
+└── final_video.gif
+```
+
 ## **📜 Citation**
 
 If you find our work useful, please consider citing:
